@@ -1,0 +1,13 @@
+
+// Add this after scanRight() method (around line 96)
+
+SensorReading SensorManager::scanBack() {
+  SensorReading reading;
+  reading.distance =
+      measureDistance(sensors[BACK].trigPin, sensors[BACK].echoPin);
+  reading.level = calculateAlertLevel(reading.distance);
+  reading.direction = BACK;
+  reading.timestamp = millis();
+
+  return reading;
+}

@@ -1,0 +1,19 @@
+# PlatformIO
+.pio/
+
+# Arduino
+*.ino.cpp
+*.ino.hex
+*.ino.elf
+
+# Build files
+build/
+bin/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation artifacts
+docs/implementation_plan.md
+docs/walkthrough.md

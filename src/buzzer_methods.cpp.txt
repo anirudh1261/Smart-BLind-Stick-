@@ -1,0 +1,65 @@
+
+// ===== BUZZER METHODS =====
+
+void FeedbackController::playBuzzerTone(int frequency, int duration) {
+  // Play tone on buzzer
+  tone(buzzerPin, frequency, duration);
+  delay(duration);
+  noTone(buzzerPin);
+}
+
+void FeedbackController::playBuzzerPattern(AlertLevel level) {
+  switch (level) {
+    case WARNING:
+      // Single beep - low pitch
+      playBuzzerTone(BUZZER_FREQ_WARNING, BUZZER_DURATION_SHORT);
+      break;
+      
+    case CRITICAL:
+      // Double beep - medium pitch
+      playBuzzerTone(BUZZER_FREQ_CRITICAL, BUZZER_DURATION_SHORT);
+      delay(100);
+      playBuzzerTone(BUZZER_FREQ_CRITICAL, BUZZER_DURATION_SHORT);
+      break;
+      
+    case DANGER:
+      // Continuous high pitch
+      playBuzzerTone(BUZZER_FREQ_DANGER, BUZZER_DURATION_LONG);
+      break;
+      
+    default:
+      break;
+  }
+}
+
+void FeedbackController::playBuzzerAlert(AlertLevel level) {
+  Serial.print("[Buzzer] Alert level: ");
+  Serial.println(level);
+  playBuzzerPattern(level);
+}
+
+void FeedbackController::playBuzzerSOS() {
+  Serial.println("[Buzzer] SOS Pattern");
+  // SOS in Morse code: ... --- ...
+  // Short-Short-Short Long-Long-Long Short-Short-Short
+  
+  // Three short beeps (S)
+  for (int i = 0; i < 3; i++) {
+    playBuzzerTone(BUZZER_FREQ_SOS, BUZZER_DURATION_SHORT);
+    delay(100);
+  }
+  delay(200);
+  
+  // Three long beeps (O)
+  for (int i = 0; i < 3; i++) {
+    playBuzzerTone(BUZZER_FREQ_SOS, BUZZER_DURATION_LONG);
+    delay(100);
+  }
+  delay(200);
+  
+  // Three short beeps (S)
+  for (int i = 0; i < 3; i++) {
+    playBuzzerTone(BUZZER_FREQ_SOS, BUZZER_DURATION_SHORT);
+    delay(100);
+  }
+}

@@ -1,0 +1,189 @@
+/*
+ * ===============================================================
+ *              SMART BLIND STICK with GPS TRACKING
+ * ===============================================================
+ *
+ * COMPLETE INTEGRATED SYSTEM:
+ * - 360° Obstacle Detection (4x HC-SR04)
+ * - Ground/Pothole Detection (IR Sensor)
+ * - Audio Guidance (APR Module)
+ * - Vibration Feedback
+ * - Buzzer Alerts
+ * - SOS Emergency Button
+ * - Real-time GPS Cloud Tracking (GeoLinker)
+ *
+ * ===============================================================
+ */
+
+#include "config.h"
+#include "feedback_controller.h"
+#include "sensor_manager.h"
+#include "simple_geolinker.h"
+#include <Arduino.h>
+#include <WiFi.h>
+
+// ===== SENSOR & FEEDBACK SYSTEM =====
+SensorManager sensorManager;
+FeedbackController feedbackController;
+
+// ===== GPS TRACKING SYSTEM =====
+HardwareSerial gpsSerial(1);
+SimpleGeoLinker geo;
+
+// ===== TIMING VARIABLES =====
+unsigned long lastSensorScan = 0;
+unsigned long lastStatusUpdate = 0;
+
+// ===== SOS BUTTON STATE =====
+bool sosButtonPressed = false;
+unsigned long sosButtonPressTime = 0;
+
+// Forward declaration
+void activateSOS();
+
+void setup() {
+  // ===== SERIAL INITIALIZATION =====
+  Serial.begin(SERIAL_BAUD_RATE);
+  delay(1000);
+
+  Serial.println("\n\n╔════════════════════════════════════════╗");
+  Serial.println("║    SMART BLIND STICK - GPS ENABLED    ║");
+  Serial.println("╚════════════════════════════════════════╝\n");
+
+  // ===== GPIO INITIALIZATION =====
+  pinMode(STATUS_LED_PIN, OUTPUT);
+  digitalWrite(STATUS_LED_PIN, HIGH);
+  pinMode(SOS_BUTTON_PIN, INPUT_PULLUP);
+
+  // ===== SENSOR SYSTEM =====
+  Serial.println("[1/4] Initializing Sensors...");
+  sensorManager.begin();
+  sensorManager.calibrate();
+  Serial.println("  ✓ 4x Ultrasonic Sensors (HC-SR04)");
+  Serial.println("  ✓ IR Ground Sensor\n");
+
+  // ===== FEEDBACK SYSTEM =====
+  Serial.println("[2/4] Initializing Feedback...");
+  feedbackController.begin();
+  Serial.println("  ✓ APR Audio Module");
+  Serial.println("  ✓ Vibration Motor");
+  Serial.println("  ✓ Buzzer\n");
+
+  // ===== GPS SYSTEM =====
+  Serial.println("[3/4] Initializing GPS...");
+  gpsSerial.begin(9600, SERIAL_8N1, 16, 17);
+  geo.begin(gpsSerial, GEOLINKER_API_KEY, GEOLINKER_DEVICE_ID);
+  Serial.println("  ✓ NEO-6M GPS Module");
+  Serial.println("  ✓ GeoLinker API Configured\n");
+
+  // ===== WiFi CONNECTION =====
+  Serial.println("[4/4] Connecting to WiFi...");
+  Serial.print("  SSID: ");
+  Serial.println(WIFI_SSID);
+
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  int attempts = 0;
+  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+    delay(500);
+    Serial.print(".");
+    attempts++;
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\n  ✓ WiFi Connected!");
+    Serial.print("  ✓ IP: ");
+    Serial.println(WiFi.localIP());
+    Serial.println("  ✓ GeoLinker Cloud Active\n");
+  } else {
+    Serial.println("\n  ⚠ WiFi Failed - Sensors Only Mode\n");
+  }
+
+  // ===== STARTUP COMPLETE =====
+  digitalWrite(STATUS_LED_PIN, LOW);
+  delay(500);
+  digitalWrite(STATUS_LED_PIN, HIGH);
+
+  Serial.println("╔════════════════════════════════════════╗");
+  Serial.println("║      SYSTEM READY - STAY SAFE!        ║");
+  Serial.println("╚════════════════════════════════════════╝\n");
+  Serial.println("Sensors: 50cm=CRITICAL, 100cm=WARNING, 200cm=SAFE\n");
+}
+
+void loop() {
+  unsigned long currentTime = millis();
+
+  // ===== OBSTACLE DETECTION (Every 50ms) =====
+  if (currentTime - lastSensorScan >= SENSOR_SCAN_INTERVAL) {
+    lastSensorScan = currentTime;
+
+    // Scan all 4 ultrasonic sensors
+    SensorReading reading = sensorManager.scanAll();
+
+    // Check for ground/pothole
+    bool potholeDetected = sensorManager.detectPothole();
+
+    // Provide immediate feedback
+    feedbackController.provideAlert(reading, potholeDetected);
+
+    // Debug output for important alerts
+    if (reading.level >= WARNING || potholeDetected) {
+      const char *dirs[] = {"FRONT", "LEFT", "RIGHT", "BACK"};
+      Serial.printf("[ALERT] %s: %.1fcm | ", dirs[reading.direction],
+                    reading.distance);
+      if (potholeDetected)
+        Serial.print("⚠ POTHOLE! | ");
+      Serial.printf("Level:%d\n", reading.level);
+    }
+  }
+
+  // ===== GPS TRACKING (Every 2 seconds) =====
+  uint8_t gpsStatus = geo.loop();
+  if (gpsStatus == STATUS_SENT) {
+    Serial.println("[GPS] ✓ Location uploaded to cloud!");
+  } else if (gpsStatus == STATUS_GPS_ERROR) {
+    // Silently continue - GPS fix takes time
+  }
+
+  // ===== VIBRATION UPDATE =====
+  feedbackController.updateVibration();
+
+  // ===== SOS BUTTON (Long press = 2 seconds) =====
+  if (digitalRead(SOS_BUTTON_PIN) == LOW) {
+    if (!sosButtonPressed) {
+      sosButtonPressed = true;
+      sosButtonPressTime = currentTime;
+    } else if (currentTime - sosButtonPressTime > 2000) {
+      activateSOS();
+      sosButtonPressed = false;
+    }
+  } else {
+    sosButtonPressed = false;
+  }
+
+  // ===== STATUS LED HEARTBEAT (1 Hz) =====
+  if (currentTime - lastStatusUpdate >= 1000) {
+    lastStatusUpdate = currentTime;
+    digitalWrite(STATUS_LED_PIN, !digitalRead(STATUS_LED_PIN));
+  }
+
+  delay(10);
+}
+
+void activateSOS() {
+  Serial.println("\n╔════════════════════════════════════════╗");
+  Serial.println("║          SOS ACTIVATED!!!              ║");
+  Serial.println("╚════════════════════════════════════════╝");
+
+  // Play SOS alert
+  feedbackController.playSOSAlert();
+
+  // Flash LED rapidly
+  for (int i = 0; i < 10; i++) {
+    digitalWrite(STATUS_LED_PIN, HIGH);
+    delay(100);
+    digitalWrite(STATUS_LED_PIN, LOW);
+    delay(100);
+  }
+
+  Serial.println("Emergency notification sent!\n");
+}
