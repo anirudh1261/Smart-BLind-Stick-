@@ -7,7 +7,7 @@ An affordable, intelligent mobility aid for visually impaired individuals using 
 **Cost**: ~₹1,840 (~$22 USD)  
 **Battery Life**: 17+ hours  
 **Detection Range**: 0-200 cm  
-**Response Time**: <200
+**Response Time**: <200ms
 
 ---
 
