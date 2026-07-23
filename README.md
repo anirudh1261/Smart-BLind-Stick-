@@ -11,7 +11,7 @@ An affordable, intelligent mobility aid for visually impaired individuals using 
 
 ---
 
-## ✨ Features
+## ✨ Featur
 
 - ✅ **Multi-directional Obstacle Detection** (Front, Left, Right)
 - ✅ **Pothole & Stair Detection** (IR ground sensor)
