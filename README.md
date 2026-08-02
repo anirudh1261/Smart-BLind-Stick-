@@ -1,6 +1,6 @@
 # 🚀 Smart Blind Stick with 360° Obstacle Detection & GPS Tracking
 
-## 🦯 Project Overview
+## 🦯 Project Overvi
 
 An affordable, intelligent mobility aid for visually impaired individuals using ESP32, ultrasonic sensors, IR sensor, GPS, and audio feedback.
 
