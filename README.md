@@ -41,7 +41,7 @@ An affordable, intelligent mobility aid for visually impaired individuals using 
 
 ---
 
-## 📁 Project Structu
+## 📁 Project Structure
 
 ```
 BlindStick/
